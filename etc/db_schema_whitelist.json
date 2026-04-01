@@ -1,0 +1,22 @@
+{
+    "muon_mfa_token": {
+        "column": {
+            "token_id": true,
+            "customer_id": true,
+            "token": true,
+            "delivery_method": true,
+            "is_used": true,
+            "verify_attempts": true,
+            "expires_at": true,
+            "created_at": true
+        },
+        "index": {
+            "MUON_MFA_TOKEN_CUSTOMER_ID_IS_USED_EXPIRES_AT": true,
+            "MUON_MFA_TOKEN_CUSTOMER_ID_CREATED_AT": true,
+            "MUON_MFA_TOKEN_EXPIRES_AT": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    }
+}

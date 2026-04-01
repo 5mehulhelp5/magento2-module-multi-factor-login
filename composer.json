@@ -1,0 +1,25 @@
+{
+    "name": "muon/module-multi-factor-login",
+    "description": "Adds two-factor authentication to Magento 2 customer login via SMS (Twilio) or email one-time tokens.",
+    "version": "1.0.0",
+    "license": [
+        "proprietary"
+    ],
+    "type": "magento2-module",
+    "require": {
+        "php": "~8.3",
+        "magento/framework": "^103.0",
+        "magento/module-customer": "^103.0",
+        "magento/module-store": "^101.0",
+        "magento/module-email": "^101.0",
+        "twilio/sdk": "^8.0"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Muon\\MultiFactorLogin\\": ""
+        }
+    }
+}

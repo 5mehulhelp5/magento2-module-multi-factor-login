@@ -1,0 +1,124 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="muon" translate="label" sortOrder="500">
+            <label>Muon</label>
+        </tab>
+        <section id="muon_multifactorlogin" translate="label" sortOrder="110"
+            showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Multi-Factor Login</label>
+            <tab>muon</tab>
+            <resource>Muon_MultiFactorLogin::config</resource>
+
+            <group id="general" translate="label" sortOrder="10"
+                showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>General</label>
+                <field id="enabled" translate="label" type="select" sortOrder="10"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Multi-Factor Login</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
+
+            <group id="token" translate="label" sortOrder="20"
+                showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Token Settings</label>
+                <field id="length" translate="label comment" type="text" sortOrder="10"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Token Length</label>
+                    <comment>Number of characters in the verification token. Allowed range: 4–12.</comment>
+                    <validate>required-entry validate-digits validate-digits-range digits-range-4-12</validate>
+                </field>
+                <field id="characters" translate="label comment" type="text" sortOrder="20"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Character Set</label>
+                    <comment>Characters used to generate the token, e.g. 0123456789 or 0123456789ABCDEF.</comment>
+                    <validate>required-entry</validate>
+                </field>
+                <field id="lifetime" translate="label comment" type="text" sortOrder="30"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Token Lifetime (minutes)</label>
+                    <comment>How long the verification token remains valid after it is sent.</comment>
+                    <validate>required-entry validate-greater-than-zero validate-digits</validate>
+                </field>
+            </group>
+
+            <group id="delivery" translate="label" sortOrder="30"
+                showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Delivery Methods</label>
+                <field id="methods" translate="label comment" type="select" sortOrder="10"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Allowed Delivery Methods</label>
+                    <comment>SMS requires Twilio credentials and a phone on the customer billing address.</comment>
+                    <source_model>Muon\MultiFactorLogin\Model\Config\Source\DeliveryMethod</source_model>
+                </field>
+            </group>
+
+            <group id="rate_limit" translate="label" sortOrder="40"
+                showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Rate Limiting</label>
+                <field id="max_requests" translate="label comment" type="text" sortOrder="10"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Max Token Requests per Window</label>
+                    <comment>Maximum number of tokens a customer may request within the rate limit window.</comment>
+                    <validate>required-entry validate-greater-than-zero validate-digits</validate>
+                </field>
+                <field id="window_minutes" translate="label comment" type="text" sortOrder="20"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Rate Limit Window (minutes)</label>
+                    <comment>Rolling time window used to count token requests.</comment>
+                    <validate>required-entry validate-greater-than-zero validate-digits</validate>
+                </field>
+                <field id="max_verify_attempts" translate="label comment" type="text" sortOrder="30"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Max Verification Attempts per Token</label>
+                    <comment>Token is invalidated after this many consecutive wrong entries.</comment>
+                    <validate>required-entry validate-greater-than-zero validate-digits</validate>
+                </field>
+            </group>
+
+            <group id="twilio" translate="label" sortOrder="50"
+                showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Twilio (SMS)</label>
+                <field id="account_sid" translate="label comment" type="text" sortOrder="10"
+                    showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Account SID</label>
+                    <comment>Your Twilio Account SID from the Twilio Console.</comment>
+                </field>
+                <field id="auth_token" translate="label" type="obscure" sortOrder="20"
+                    showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Auth Token</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="from_number" translate="label comment" type="text" sortOrder="30"
+                    showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>From Number</label>
+                    <comment>Twilio phone number in E.164 format, e.g. +15551234567.</comment>
+                </field>
+            </group>
+
+            <group id="email" translate="label" sortOrder="60"
+                showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Email</label>
+                <field id="sender_email" translate="label comment" type="text" sortOrder="10"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Sender Email</label>
+                    <comment>Leave empty to use the store's general contact email.</comment>
+                    <validate>validate-email</validate>
+                </field>
+                <field id="sender_name" translate="label" type="text" sortOrder="20"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Sender Name</label>
+                    <validate>required-entry</validate>
+                </field>
+                <field id="template" translate="label comment" type="select" sortOrder="30"
+                    showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Email Template</label>
+                    <comment>Customise via Marketing → Email Templates, then select your template here.</comment>
+                    <source_model>Magento\Config\Model\Config\Source\Email\Template</source_model>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

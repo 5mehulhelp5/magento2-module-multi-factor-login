@@ -1,0 +1,47 @@
+<!--@subject {{trans "Your verification code"}} @-->
+<!--@vars {
+"var customer_name":"Customer Name",
+"var token":"Verification Token",
+"var token_lifetime":"Token Lifetime (minutes)",
+"var store.getFrontendName()":"Store Name"
+} @-->
+{{template config_path="design/email/header_template"}}
+
+<table>
+    <tr>
+        <td class="email-intro">
+            <p class="greeting">{{trans "%name," name=$customer_name}}</p>
+            <p>
+                {{trans "You are receiving this email because a login attempt was made to your account."}}
+            </p>
+            <p>
+                {{trans "Please use the verification code below to complete your login. The code expires in %minutes minutes." minutes=$token_lifetime}}
+            </p>
+        </td>
+    </tr>
+    <tr>
+        <td class="email-information">
+            <table class="email-order-details" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td align="center" style="padding: 20px 0;">
+                        <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; font-family: monospace;">
+                            {{var token}}
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td class="email-intro">
+            <p>
+                {{trans "If you did not attempt to log in, please ignore this email. Your account remains secure."}}
+            </p>
+            <p>
+                {{trans "Do not share this code with anyone."}}
+            </p>
+        </td>
+    </tr>
+</table>
+
+{{template config_path="design/email/footer_template"}}

@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Set the 'mfa' namespace on the dedicated session storage via DI (avoids useless constructor override) -->
+    <type name="Muon\MultiFactorLogin\Model\Session\Storage">
+        <arguments>
+            <argument name="namespace" xsi:type="string">mfa</argument>
+        </arguments>
+    </type>
+
+    <!-- Bind dedicated MFA session storage (namespace: 'mfa', isolated from CustomerSession) -->
+    <type name="Muon\MultiFactorLogin\Model\Session">
+        <arguments>
+            <argument name="storage" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Storage</argument>
+        </arguments>
+    </type>
+
+    <!-- Interface-to-implementation bindings -->
+    <preference for="Muon\MultiFactorLogin\Api\TokenServiceInterface"
+                type="Muon\MultiFactorLogin\Model\TokenService"/>
+    <preference for="Muon\MultiFactorLogin\Api\RateLimitServiceInterface"
+                type="Muon\MultiFactorLogin\Model\RateLimitService"/>
+    <preference for="Muon\MultiFactorLogin\Api\Data\TokenInterface"
+                type="Muon\MultiFactorLogin\Model\Token"/>
+
+    <!-- Plugin: intercept successful password login for MFA -->
+    <type name="Magento\Customer\Controller\Account\LoginPost">
+        <plugin name="muon_multifactorlogin_intercept_login"
+                type="Muon\MultiFactorLogin\Plugin\LoginPostPlugin"
+                sortOrder="10"/>
+    </type>
+
+    <!--
+        Session proxy injection — must not type-hint Session\Proxy directly in constructors
+        (Magento2 PHPCS rule). Declare the concrete Session type, then override via di.xml.
+
+        CustomerSession proxy — used only for isLoggedIn() / loginById() / regenerateId().
+        MFA state (pending customer ID, available methods, delivery method) is stored in
+        Muon\MultiFactorLogin\Model\Session which lives in a separate 'mfa' namespace and
+        is unaffected by CustomerSession::logout().
+    -->
+    <type name="Muon\MultiFactorLogin\Plugin\LoginPostPlugin">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+            <argument name="mfaSession" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="Muon\MultiFactorLogin\Controller\Verify\Index">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+            <argument name="mfaSession" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="Muon\MultiFactorLogin\Controller\Verify\Send">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+            <argument name="mfaSession" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="Muon\MultiFactorLogin\Controller\Verify\Submit">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+            <argument name="mfaSession" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="Muon\MultiFactorLogin\Controller\Verify\Resend">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+            <argument name="mfaSession" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="Muon\MultiFactorLogin\Block\Verify\Form">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+            <argument name="mfaSession" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+</config>

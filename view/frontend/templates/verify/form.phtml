@@ -1,0 +1,144 @@
+<?php
+/**
+ * MFA verification form template.
+ *
+ * @var \Muon\MultiFactorLogin\Block\Verify\Form $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+?>
+<div class="login-container">
+    <div class="block block-customer-login">
+        <div class="block-title">
+            <strong><?= $escaper->escapeHtml(__('Verify Your Identity')) ?></strong>
+        </div>
+        <div class="block-content">
+
+            <?php if (!$block->isTokenSent()): ?>
+                <?php /* ── Step 1: Choose delivery method (or show single send button) ── */ ?>
+                <p><?= $escaper->escapeHtml(__('To complete your login, we need to verify your identity.')) ?></p>
+
+                <form method="post"
+                      action="<?= $escaper->escapeUrl($block->getSendUrl()) ?>"
+                      id="mfa-send-form">
+                    <?= $block->getBlockHtml('formkey') ?>
+
+                    <?php if ($block->hasMethodChoice()): ?>
+                        <p><?= $escaper->escapeHtml(__('How would you like to receive your verification code?')) ?></p>
+                        <fieldset class="fieldset">
+                            <?php if ($block->isEmailAvailable()): ?>
+                                <div class="field choice">
+                                    <input type="radio"
+                                           name="delivery_method"
+                                           id="mfa-method-email"
+                                           value="email"
+                                           checked="checked"/>
+                                    <label for="mfa-method-email">
+                                        <?= $escaper->escapeHtml(
+                                            __('Email to %1', $block->getMaskedEmail())
+                                        ) ?>
+                                    </label>
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($block->isSmsAvailable()): ?>
+                                <div class="field choice">
+                                    <input type="radio"
+                                           name="delivery_method"
+                                           id="mfa-method-sms"
+                                           value="sms"/>
+                                    <label for="mfa-method-sms">
+                                        <?= $escaper->escapeHtml(
+                                            __('SMS to %1', $block->getMaskedPhone())
+                                        ) ?>
+                                    </label>
+                                </div>
+                            <?php endif; ?>
+                        </fieldset>
+                    <?php elseif ($block->isEmailAvailable()): ?>
+                        <input type="hidden" name="delivery_method" value="email"/>
+                        <?php $msg = __('A verification code will be sent to %1.', $block->getMaskedEmail()); ?>
+                        <p><?= $escaper->escapeHtml($msg) ?></p>
+                    <?php else: ?>
+                        <input type="hidden" name="delivery_method" value="sms"/>
+                        <?php $msg = __('A verification code will be sent by SMS to %1.', $block->getMaskedPhone()); ?>
+                        <p><?= $escaper->escapeHtml($msg) ?></p>
+                    <?php endif; ?>
+
+                    <div class="actions-toolbar">
+                        <div class="primary">
+                            <button type="submit" class="action primary" id="mfa-send-button">
+                                <span><?= $escaper->escapeHtml(__('Send Verification Code')) ?></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+            <?php else: ?>
+                <?php /* ── Step 2: Enter verification code ── */ ?>
+                <?php
+                $method = $block->getDeliveryMethod();
+                if ($method === 'sms') {
+                    $sentTo = __('SMS to %1', $block->getMaskedPhone());
+                } else {
+                    $sentTo = __('email to %1', $block->getMaskedEmail());
+                }
+                ?>
+                <p><?= $escaper->escapeHtml(__('A verification code has been sent via %1.', $sentTo)) ?></p>
+                <p><?= $escaper->escapeHtml(__('Please enter the code below to complete your login.')) ?></p>
+
+                <form method="post"
+                      action="<?= $escaper->escapeUrl($block->getSubmitUrl()) ?>"
+                      id="mfa-submit-form">
+                    <?= $block->getBlockHtml('formkey') ?>
+
+                    <fieldset class="fieldset">
+                        <div class="field required">
+                            <label class="label" for="mfa-token">
+                                <span><?= $escaper->escapeHtml(__('Verification Code')) ?></span>
+                            </label>
+                            <div class="control">
+                                <input type="text"
+                                       id="mfa-token"
+                                       name="token"
+                                       class="input-text"
+                                       autocomplete="one-time-code"
+                                       inputmode="numeric"
+                                       maxlength="<?= $escaper->escapeHtmlAttr((string) $block->getTokenLength()) ?>"
+                                       required="required"
+                                       autofocus="autofocus"/>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <div class="actions-toolbar">
+                        <div class="primary">
+                            <button type="submit" class="action primary" id="mfa-submit-button">
+                                <span><?= $escaper->escapeHtml(__('Verify')) ?></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="mfa-secondary-actions" style="margin-top: 1rem;">
+                    <form method="post"
+                          action="<?= $escaper->escapeUrl($block->getResendUrl()) ?>"
+                          id="mfa-resend-form"
+                          style="display: inline;">
+                        <?= $block->getBlockHtml('formkey') ?>
+                        <button type="submit" class="action secondary">
+                            <span><?= $escaper->escapeHtml(__('Resend code')) ?></span>
+                        </button>
+                    </form>
+
+                    <?php if ($block->hasMethodChoice()): ?>
+                        <a href="<?= $escaper->escapeUrl($block->getUrl('mfa/verify/changemethodpost')) ?>"
+                           style="margin-left: 1rem;">
+                            <?= $escaper->escapeHtml(__('Use a different method')) ?>
+                        </a>
+                    <?php endif; ?>
+                </div>
+
+            <?php endif; ?>
+
+        </div>
+    </div>
+</div>

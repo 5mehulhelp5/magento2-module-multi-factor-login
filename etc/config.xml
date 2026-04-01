@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <muon_multifactorlogin>
+            <general>
+                <enabled>0</enabled>
+            </general>
+            <token>
+                <length>6</length>
+                <characters>0123456789</characters>
+                <lifetime>10</lifetime>
+            </token>
+            <delivery>
+                <methods>both</methods>
+            </delivery>
+            <rate_limit>
+                <max_requests>3</max_requests>
+                <window_minutes>60</window_minutes>
+                <max_verify_attempts>5</max_verify_attempts>
+            </rate_limit>
+            <email>
+                <sender_name>Multi-Factor Login</sender_name>
+            </email>
+        </muon_multifactorlogin>
+    </default>
+</config>
