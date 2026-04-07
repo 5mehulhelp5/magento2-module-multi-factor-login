@@ -67,7 +67,7 @@ class Token extends AbstractModel implements TokenInterface
     }
 
     /**
-     * Get the encrypted token value.
+     * Get the SHA-256 hashed token value.
      *
      * @return string
      */

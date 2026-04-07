@@ -54,7 +54,6 @@
     </type>
     <type name="Muon\MultiFactorLogin\Controller\Verify\Send">
         <arguments>
-            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
             <argument name="mfaSession" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Proxy</argument>
         </arguments>
     </type>
@@ -66,7 +65,11 @@
     </type>
     <type name="Muon\MultiFactorLogin\Controller\Verify\Resend">
         <arguments>
-            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+            <argument name="mfaSession" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="Muon\MultiFactorLogin\Controller\Verify\ChangeMethod">
+        <arguments>
             <argument name="mfaSession" xsi:type="object">Muon\MultiFactorLogin\Model\Session\Proxy</argument>
         </arguments>
     </type>

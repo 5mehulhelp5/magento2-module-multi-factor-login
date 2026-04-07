@@ -13,6 +13,7 @@ use Magento\Framework\View\Element\Template\Context;
 use Muon\MultiFactorLogin\Api\Data\TokenInterface;
 use Muon\MultiFactorLogin\Model\Config;
 use Muon\MultiFactorLogin\Model\Session as MfaSession;
+use Muon\MultiFactorLogin\Service\CustomerPhoneResolver;
 
 /**
  * Block for the MFA verification form template.
@@ -22,13 +23,27 @@ use Muon\MultiFactorLogin\Model\Session as MfaSession;
 class Form extends Template
 {
     /**
-     * @param \Magento\Framework\View\Element\Template\Context  $context
-     * @param \Muon\MultiFactorLogin\Model\Config               $config
-     * @param \Magento\Customer\Model\Session                   $customerSession
-     * @param \Muon\MultiFactorLogin\Model\Session              $mfaSession
-     * @param \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository
-     * @param \Magento\Customer\Api\AddressRepositoryInterface  $addressRepository
-     * @param mixed[]                                           $data  Block configuration data
+     * Cached masked email — null means not yet resolved.
+     *
+     * @var string|null
+     */
+    private ?string $maskedEmail = null;
+
+    /**
+     * Cached masked phone — null means not yet resolved.
+     *
+     * @var string|null
+     */
+    private ?string $maskedPhone = null;
+
+    /**
+     * @param \Magento\Framework\View\Element\Template\Context     $context
+     * @param \Muon\MultiFactorLogin\Model\Config                  $config
+     * @param \Magento\Customer\Model\Session                      $customerSession
+     * @param \Muon\MultiFactorLogin\Model\Session                 $mfaSession
+     * @param \Magento\Customer\Api\CustomerRepositoryInterface    $customerRepository
+     * @param \Muon\MultiFactorLogin\Service\CustomerPhoneResolver $phoneResolver
+     * @param mixed[]                                              $data  Block configuration data
      */
     public function __construct(
         Context $context,
@@ -36,7 +51,7 @@ class Form extends Template
         private readonly CustomerSession $customerSession,
         private readonly MfaSession $mfaSession,
         private readonly CustomerRepositoryInterface $customerRepository,
-        private readonly AddressRepositoryInterface $addressRepository,
+        private readonly CustomerPhoneResolver $phoneResolver,
         array $data = [],
     ) {
         parent::__construct($context, $data);
@@ -95,48 +110,64 @@ class Form extends Template
     }
 
     /**
+     * Check whether the configured token character set is entirely numeric.
+     *
+     * Used by the template to set the appropriate inputmode on the token field.
+     *
+     * @return bool
+     */
+    public function isNumericTokenSet(): bool
+    {
+        return ctype_digit($this->config->getTokenCharacters());
+    }
+
+    /**
      * Get the masked email address for display (e.g. j***@example.com).
+     *
+     * Result is cached so repeated template calls do not re-query the database.
      *
      * @return string
      */
     public function getMaskedEmail(): string
     {
-        $customerId = $this->mfaSession->getMfaPendingCustomerId();
-        if (!$customerId) {
-            return '';
+        if ($this->maskedEmail === null) {
+            $this->maskedEmail = '';
+            $customerId        = $this->mfaSession->getMfaPendingCustomerId();
+            if ($customerId) {
+                try {
+                    $customer          = $this->customerRepository->getById((int) $customerId);
+                    $this->maskedEmail = $this->maskEmail($customer->getEmail());
+                } catch (NoSuchEntityException $e) {
+                    // Customer not found — maskedEmail stays ''
+                    $this->_logger->debug($e->getMessage());
+                }
+            }
         }
 
-        try {
-            $customer = $this->customerRepository->getById((int) $customerId);
-            return $this->maskEmail($customer->getEmail());
-        } catch (NoSuchEntityException) {
-            return '';
-        }
+        return $this->maskedEmail;
     }
 
     /**
      * Get the masked phone number for display (e.g. ***-***-1234).
      *
+     * Result is cached so repeated template calls do not re-query the database.
+     *
      * @return string
      */
     public function getMaskedPhone(): string
     {
-        $customerId = $this->mfaSession->getMfaPendingCustomerId();
-        if (!$customerId) {
-            return '';
+        if ($this->maskedPhone === null) {
+            $this->maskedPhone = '';
+            $customerId        = $this->mfaSession->getMfaPendingCustomerId();
+            if ($customerId) {
+                $phone = $this->phoneResolver->resolve((int) $customerId);
+                if ($phone !== null) {
+                    $this->maskedPhone = $this->maskPhone($phone);
+                }
+            }
         }
 
-        try {
-            $customer         = $this->customerRepository->getById((int) $customerId);
-            $billingAddressId = $customer->getDefaultBilling();
-            if (!$billingAddressId) {
-                return '';
-            }
-            $address = $this->addressRepository->getById((int) $billingAddressId);
-            return $this->maskPhone((string) $address->getTelephone());
-        } catch (NoSuchEntityException) {
-            return '';
-        }
+        return $this->maskedPhone;
     }
 
     /**
@@ -167,6 +198,16 @@ class Form extends Template
     public function getResendUrl(): string
     {
         return $this->getUrl('mfa/verify/resend');
+    }
+
+    /**
+     * Get the URL for the change-method action.
+     *
+     * @return string
+     */
+    public function getChangeMethodUrl(): string
+    {
+        return $this->getUrl('mfa/verify/changemethod');
     }
 
     /**

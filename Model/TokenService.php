@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Muon\MultiFactorLogin\Model;
 
-use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Stdlib\DateTime\DateTime;
 use Muon\MultiFactorLogin\Api\Data\TokenInterface;
@@ -18,7 +17,7 @@ use Muon\MultiFactorLogin\Service\SmsService;
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * Coordination service — coupling is inherent to orchestrating token generation,
- * encryption, persistence, rate limiting, and multi-channel dispatch.
+ * hashing, persistence, rate limiting, and multi-channel dispatch.
  */
 class TokenService implements TokenServiceInterface
 {
@@ -30,7 +29,6 @@ class TokenService implements TokenServiceInterface
      * @param \Muon\MultiFactorLogin\Api\RateLimitServiceInterface               $rateLimitService
      * @param \Muon\MultiFactorLogin\Service\EmailService                        $emailService
      * @param \Muon\MultiFactorLogin\Service\SmsService                          $smsService
-     * @param \Magento\Framework\Encryption\EncryptorInterface                   $encryptor
      * @param \Magento\Framework\Stdlib\DateTime\DateTime                        $dateTime
      */
     public function __construct(
@@ -41,13 +39,12 @@ class TokenService implements TokenServiceInterface
         private readonly RateLimitServiceInterface $rateLimitService,
         private readonly EmailService $emailService,
         private readonly SmsService $smsService,
-        private readonly EncryptorInterface $encryptor,
         private readonly DateTime $dateTime,
     ) {
     }
 
     /**
-     * Generate an encrypted one-time token, persist it, and dispatch it to the customer.
+     * Generate a hashed one-time token, persist it, and dispatch it to the customer.
      *
      * @param int    $customerId
      * @param string $deliveryMethod
@@ -71,7 +68,7 @@ class TokenService implements TokenServiceInterface
 
         $token = $this->tokenFactory->create();
         $token->setCustomerId($customerId);
-        $token->setToken($this->encryptor->encrypt($rawToken));
+        $token->setToken(hash('sha256', $rawToken));
         $token->setDeliveryMethod($deliveryMethod);
         $token->setIsUsed(false);
         $token->setVerifyAttempts(0);
@@ -120,9 +117,7 @@ class TokenService implements TokenServiceInterface
             );
         }
 
-        $storedToken = $this->encryptor->decrypt($token->getToken());
-
-        if (!hash_equals($storedToken, $inputToken)) {
+        if (!hash_equals($token->getToken(), hash('sha256', $inputToken))) {
             $token->setVerifyAttempts($token->getVerifyAttempts() + 1);
 
             if ($token->getVerifyAttempts() >= $maxAttempts) {
@@ -142,12 +137,15 @@ class TokenService implements TokenServiceInterface
     /**
      * Generate a cryptographically random token from the configured character set.
      *
+     * The character set is deduplicated before use to prevent biased output
+     * when an admin accidentally repeats characters in the config value.
+     *
      * @return string
      */
     private function generateToken(): string
     {
         $length     = $this->config->getTokenLength();
-        $characters = $this->config->getTokenCharacters();
+        $characters = implode('', array_unique(str_split($this->config->getTokenCharacters())));
         $charCount  = strlen($characters);
         $token      = '';
 
@@ -182,7 +180,7 @@ class TokenService implements TokenServiceInterface
     /**
      * Invalidate any previously active tokens for the customer before issuing a new one.
      *
-     * This prevents an attacker from using an old token that was never consumed.
+     * Uses a single bulk UPDATE instead of iterating individual saves.
      *
      * @param int $customerId
      * @return void
@@ -190,15 +188,15 @@ class TokenService implements TokenServiceInterface
     private function invalidateActiveTokens(int $customerId): void
     {
         $now        = $this->dateTime->gmtDate('Y-m-d H:i:s');
-        $collection = $this->collectionFactory->create();
-        $collection->addFieldToFilter('customer_id', $customerId)
-            ->addFieldToFilter('is_used', 0)
-            ->addFieldToFilter('expires_at', ['gteq' => $now]);
-
-        foreach ($collection as $token) {
-            /** @var \Muon\MultiFactorLogin\Model\Token $token */
-            $token->setIsUsed(true);
-            $this->tokenResource->save($token);
-        }
+        $connection = $this->tokenResource->getConnection();
+        $connection->update(
+            $this->tokenResource->getMainTable(),
+            ['is_used' => 1],
+            [
+                'customer_id = ?' => $customerId,
+                'is_used = ?'     => 0,
+                'expires_at >= ?' => $now,
+            ]
+        );
     }
 }

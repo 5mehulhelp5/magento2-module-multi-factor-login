@@ -77,11 +77,4 @@ class RateLimitServiceTest extends TestCase
 
         $this->assertFalse($this->service->isRequestAllowed(1));
     }
-
-    public function testRecordRequestIsNoOp(): void
-    {
-        // recordRequest is intentionally a no-op; assert it does not throw.
-        $this->service->recordRequest(1);
-        $this->assertTrue(true);
-    }
 }

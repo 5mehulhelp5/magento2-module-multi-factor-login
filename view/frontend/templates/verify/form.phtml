@@ -96,12 +96,13 @@
                                 <span><?= $escaper->escapeHtml(__('Verification Code')) ?></span>
                             </label>
                             <div class="control">
+                                <?php $inputMode = $block->isNumericTokenSet() ? 'numeric' : 'text'; ?>
                                 <input type="text"
                                        id="mfa-token"
                                        name="token"
                                        class="input-text"
                                        autocomplete="one-time-code"
-                                       inputmode="numeric"
+                                       inputmode="<?= $escaper->escapeHtmlAttr($inputMode) ?>"
                                        maxlength="<?= $escaper->escapeHtmlAttr((string) $block->getTokenLength()) ?>"
                                        required="required"
                                        autofocus="autofocus"/>
@@ -130,10 +131,15 @@
                     </form>
 
                     <?php if ($block->hasMethodChoice()): ?>
-                        <a href="<?= $escaper->escapeUrl($block->getUrl('mfa/verify/changemethodpost')) ?>"
-                           style="margin-left: 1rem;">
-                            <?= $escaper->escapeHtml(__('Use a different method')) ?>
-                        </a>
+                        <form method="post"
+                              action="<?= $escaper->escapeUrl($block->getChangeMethodUrl()) ?>"
+                              id="mfa-changemethod-form"
+                              style="display: inline;">
+                            <?= $block->getBlockHtml('formkey') ?>
+                            <button type="submit" class="action secondary" style="margin-left: 1rem;">
+                                <span><?= $escaper->escapeHtml(__('Use a different method')) ?></span>
+                            </button>
+                        </form>
                     <?php endif; ?>
                 </div>
 

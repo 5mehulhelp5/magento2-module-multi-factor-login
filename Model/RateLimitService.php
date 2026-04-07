@@ -49,15 +49,4 @@ class RateLimitService implements RateLimitServiceInterface
 
         return $count < $this->config->getMaxRequests();
     }
-
-    /**
-     * No-op: the count is derived from the token table directly.
-     *
-     * @param int $customerId
-     * @return void
-     */
-    // phpcs:ignore Magento2.CodeAnalysis.EmptyBlock -- intentional no-op; rate is derived from COUNT on token rows
-    public function recordRequest(int $customerId): void
-    {
-    }
 }

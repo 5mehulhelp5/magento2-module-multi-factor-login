@@ -7,8 +7,8 @@
                 identity="true" comment="Token ID"/>
         <column xsi:type="int" name="customer_id" padding="10" unsigned="true" nullable="false"
                 comment="Customer ID"/>
-        <column xsi:type="varchar" name="token" nullable="false" length="512"
-                comment="AES-256 encrypted one-time token"/>
+        <column xsi:type="varchar" name="token" nullable="false" length="64"
+                comment="SHA-256 hashed one-time token"/>
         <column xsi:type="varchar" name="delivery_method" nullable="false" length="10"
                 comment="Delivery method: sms or email"/>
         <column xsi:type="smallint" name="is_used" padding="5" unsigned="true" nullable="false"

@@ -8,17 +8,14 @@ use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\RedirectFactory;
 use Magento\Framework\Data\Form\FormKey\Validator as FormKeyValidator;
-use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Message\ManagerInterface as MessageManager;
-use Muon\MultiFactorLogin\Api\Data\TokenInterface;
-use Muon\MultiFactorLogin\Api\TokenServiceInterface;
 use Muon\MultiFactorLogin\Model\Config;
 use Muon\MultiFactorLogin\Model\Session as MfaSession;
 
 /**
- * Generates and dispatches a new MFA token to the customer via the selected method.
+ * Resets the chosen delivery method so the customer can select a different one.
  */
-class Send implements HttpPostActionInterface
+class ChangeMethod implements HttpPostActionInterface
 {
     /**
      * @param \Magento\Framework\App\RequestInterface               $request
@@ -26,7 +23,6 @@ class Send implements HttpPostActionInterface
      * @param \Magento\Framework\Controller\Result\RedirectFactory  $redirectFactory
      * @param \Magento\Framework\Data\Form\FormKey\Validator        $formKeyValidator
      * @param \Magento\Framework\Message\ManagerInterface           $messageManager
-     * @param \Muon\MultiFactorLogin\Api\TokenServiceInterface      $tokenService
      * @param \Muon\MultiFactorLogin\Model\Config                   $config
      */
     public function __construct(
@@ -35,13 +31,12 @@ class Send implements HttpPostActionInterface
         private readonly RedirectFactory $redirectFactory,
         private readonly FormKeyValidator $formKeyValidator,
         private readonly MessageManager $messageManager,
-        private readonly TokenServiceInterface $tokenService,
         private readonly Config $config,
     ) {
     }
 
     /**
-     * Handle token send request.
+     * Clear the selected delivery method and redirect back to the method-selection step.
      *
      * @return \Magento\Framework\Controller\Result\Redirect
      */
@@ -49,13 +44,7 @@ class Send implements HttpPostActionInterface
     {
         $redirect = $this->redirectFactory->create();
 
-        if (!$this->config->isEnabled()) {
-            return $redirect->setPath('customer/account/login');
-        }
-
-        // Guard: no pending MFA state.
-        $pendingId = $this->mfaSession->getMfaPendingCustomerId();
-        if (!$pendingId) {
+        if (!$this->config->isEnabled() || !$this->mfaSession->getMfaPendingCustomerId()) {
             return $redirect->setPath('customer/account/login');
         }
 
@@ -64,24 +53,7 @@ class Send implements HttpPostActionInterface
             return $redirect->setPath('mfa/verify');
         }
 
-        $method = (string) $this->request->getParam('delivery_method');
-
-        // Validate that the requested method is available for this customer.
-        $availableMethods = $this->mfaSession->getMfaAvailableMethods() ?? [];
-        if (!in_array($method, [TokenInterface::METHOD_SMS, TokenInterface::METHOD_EMAIL], true)
-            || !in_array($method, $availableMethods, true)
-        ) {
-            $this->messageManager->addErrorMessage(__('Invalid delivery method selected.'));
-            return $redirect->setPath('mfa/verify');
-        }
-
-        try {
-            $this->tokenService->createAndSend((int) $pendingId, $method);
-            $this->mfaSession->setMfaDeliveryMethod($method);
-        } catch (LocalizedException $e) {
-            $this->messageManager->addErrorMessage($e->getMessage());
-            return $redirect->setPath('mfa/verify');
-        }
+        $this->mfaSession->unsMfaDeliveryMethod();
 
         return $redirect->setPath('mfa/verify');
     }

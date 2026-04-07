@@ -1,0 +1,9 @@
+# Enforce LF line endings in the repository for all text files,
+# regardless of the contributor's OS or core.autocrlf setting.
+* text=auto eol=lf
+
+# Binary files — never touch line endings.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary

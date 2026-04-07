@@ -57,14 +57,14 @@ interface TokenInterface
     public function setCustomerId(int $customerId): self;
 
     /**
-     * Get the encrypted token value.
+     * Get the SHA-256 hashed token value.
      *
      * @return string
      */
     public function getToken(): string;
 
     /**
-     * Set the encrypted token value.
+     * Set the SHA-256 hashed token value.
      *
      * @param string $token
      * @return $this

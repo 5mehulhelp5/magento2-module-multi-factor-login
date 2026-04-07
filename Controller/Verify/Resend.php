@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Muon\MultiFactorLogin\Controller\Verify;
 
-use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\RedirectFactory;
@@ -22,7 +21,6 @@ class Resend implements HttpPostActionInterface
 {
     /**
      * @param \Magento\Framework\App\RequestInterface               $request
-     * @param \Magento\Customer\Model\Session                       $customerSession
      * @param \Muon\MultiFactorLogin\Model\Session                  $mfaSession
      * @param \Magento\Framework\Controller\Result\RedirectFactory  $redirectFactory
      * @param \Magento\Framework\Data\Form\FormKey\Validator        $formKeyValidator
@@ -32,7 +30,6 @@ class Resend implements HttpPostActionInterface
      */
     public function __construct(
         private readonly RequestInterface $request,
-        private readonly CustomerSession $customerSession,
         private readonly MfaSession $mfaSession,
         private readonly RedirectFactory $redirectFactory,
         private readonly FormKeyValidator $formKeyValidator,

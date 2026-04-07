@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Muon\MultiFactorLogin\Test\Unit\Model;
 
-use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Stdlib\DateTime\DateTime;
 use Muon\MultiFactorLogin\Api\Data\TokenInterface;
@@ -19,6 +18,7 @@ use Muon\MultiFactorLogin\Model\TokenService;
 use Muon\MultiFactorLogin\Service\EmailService;
 use Muon\MultiFactorLogin\Service\SmsService;
 use ArrayIterator;
+use Magento\Framework\DB\Adapter\AdapterInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -65,14 +65,14 @@ class TokenServiceTest extends TestCase
     private SmsService $smsService;
 
     /**
-     * @var \Magento\Framework\Encryption\EncryptorInterface|\PHPUnit\Framework\MockObject\MockObject
-     */
-    private EncryptorInterface $encryptor;
-
-    /**
      * @var \Magento\Framework\Stdlib\DateTime\DateTime|\PHPUnit\Framework\MockObject\MockObject
      */
     private DateTime $dateTime;
+
+    /**
+     * @var \Magento\Framework\DB\Adapter\AdapterInterface|\PHPUnit\Framework\MockObject\MockObject
+     */
+    private AdapterInterface $connection;
 
     /**
      * @var \Muon\MultiFactorLogin\Model\TokenService
@@ -88,8 +88,11 @@ class TokenServiceTest extends TestCase
         $this->rateLimitService  = $this->createMock(RateLimitServiceInterface::class);
         $this->emailService      = $this->createMock(EmailService::class);
         $this->smsService        = $this->createMock(SmsService::class);
-        $this->encryptor         = $this->createMock(EncryptorInterface::class);
         $this->dateTime          = $this->createMock(DateTime::class);
+        $this->connection        = $this->createMock(AdapterInterface::class);
+
+        $this->tokenResource->method('getConnection')->willReturn($this->connection);
+        $this->tokenResource->method('getMainTable')->willReturn('muon_mfa_token');
 
         $this->service = new TokenService(
             $this->config,
@@ -99,7 +102,6 @@ class TokenServiceTest extends TestCase
             $this->rateLimitService,
             $this->emailService,
             $this->smsService,
-            $this->encryptor,
             $this->dateTime,
         );
     }
@@ -122,17 +124,15 @@ class TokenServiceTest extends TestCase
         $this->config->method('getTokenLifetime')->willReturn(10);
 
         $this->dateTime->method('gmtDate')->willReturn('2026-01-01 00:00:00');
-        $this->encryptor->method('encrypt')->willReturnArgument(0);
+        $this->connection->method('update');
 
         $emptyCollection = $this->createMock(Collection::class);
         $emptyCollection->method('addFieldToFilter')->willReturnSelf();
         $emptyCollection->method('setOrder')->willReturnSelf();
         $emptyCollection->method('setPageSize')->willReturnSelf();
-        $emptyCollection->method('getIterator')->willReturn(new ArrayIterator([]));
 
         $token = $this->createMock(Token::class);
         $token->method('getTokenId')->willReturn(null);
-
         $emptyCollection->method('getFirstItem')->willReturn($token);
 
         $this->collectionFactory->method('create')->willReturn($emptyCollection);
@@ -152,13 +152,12 @@ class TokenServiceTest extends TestCase
         $this->config->method('getTokenLifetime')->willReturn(10);
 
         $this->dateTime->method('gmtDate')->willReturn('2026-01-01 00:00:00');
-        $this->encryptor->method('encrypt')->willReturnArgument(0);
+        $this->connection->method('update');
 
         $emptyCollection = $this->createMock(Collection::class);
         $emptyCollection->method('addFieldToFilter')->willReturnSelf();
         $emptyCollection->method('setOrder')->willReturnSelf();
         $emptyCollection->method('setPageSize')->willReturnSelf();
-        $emptyCollection->method('getIterator')->willReturn(new ArrayIterator([]));
 
         $token = $this->createMock(Token::class);
         $token->method('getTokenId')->willReturn(null);
@@ -181,11 +180,10 @@ class TokenServiceTest extends TestCase
         $token->method('getTokenId')->willReturn(42);
         $token->method('getExpiresAt')->willReturn('2026-12-31 23:59:59');
         $token->method('getVerifyAttempts')->willReturn(0);
-        $token->method('getToken')->willReturn('encrypted');
+        $token->method('getToken')->willReturn(hash('sha256', $rawToken));
 
         $this->dateTime->method('gmtDate')->willReturn('2026-01-01 00:00:00');
         $this->config->method('getMaxVerifyAttempts')->willReturn(5);
-        $this->encryptor->method('decrypt')->willReturn($rawToken);
 
         $token->expects($this->once())->method('setIsUsed')->with(true);
         $this->tokenResource->expects($this->once())->method('save');
@@ -208,11 +206,10 @@ class TokenServiceTest extends TestCase
         $token->method('getTokenId')->willReturn(42);
         $token->method('getExpiresAt')->willReturn('2026-12-31 23:59:59');
         $token->method('getVerifyAttempts')->willReturn(1);
-        $token->method('getToken')->willReturn('encrypted');
+        $token->method('getToken')->willReturn(hash('sha256', 'correct'));
 
         $this->dateTime->method('gmtDate')->willReturn('2026-01-01 00:00:00');
         $this->config->method('getMaxVerifyAttempts')->willReturn(5);
-        $this->encryptor->method('decrypt')->willReturn('correct');
 
         $token->expects($this->once())->method('setVerifyAttempts')->with(2);
         $this->tokenResource->expects($this->once())->method('save');

@@ -4,23 +4,17 @@ declare(strict_types=1);
 
 namespace Muon\MultiFactorLogin\Plugin;
 
-use Magento\Customer\Api\AddressRepositoryInterface;
-use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Controller\Account\LoginPost;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\Controller\Result\RedirectFactory;
-use Magento\Framework\Exception\NoSuchEntityException;
 use Muon\MultiFactorLogin\Api\Data\TokenInterface;
 use Muon\MultiFactorLogin\Model\Config;
 use Muon\MultiFactorLogin\Model\Session as MfaSession;
+use Muon\MultiFactorLogin\Service\CustomerPhoneResolver;
 
 /**
  * Intercepts a successful password-based login and redirects the customer
  * to the MFA verification page when multi-factor authentication is enabled.
- *
- * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
- * Coordination plugin — coupling is inherent to checking session state, customer
- * data, and building a redirect response at the login interception point.
  */
 class LoginPostPlugin
 {
@@ -29,16 +23,14 @@ class LoginPostPlugin
      * @param \Magento\Customer\Model\Session                           $customerSession
      * @param \Muon\MultiFactorLogin\Model\Session                      $mfaSession
      * @param \Magento\Framework\Controller\Result\RedirectFactory      $redirectFactory
-     * @param \Magento\Customer\Api\CustomerRepositoryInterface         $customerRepository
-     * @param \Magento\Customer\Api\AddressRepositoryInterface          $addressRepository
+     * @param \Muon\MultiFactorLogin\Service\CustomerPhoneResolver      $phoneResolver
      */
     public function __construct(
         private readonly Config $config,
         private readonly CustomerSession $customerSession,
         private readonly MfaSession $mfaSession,
         private readonly RedirectFactory $redirectFactory,
-        private readonly CustomerRepositoryInterface $customerRepository,
-        private readonly AddressRepositoryInterface $addressRepository,
+        private readonly CustomerPhoneResolver $phoneResolver,
     ) {
     }
 
@@ -101,7 +93,7 @@ class LoginPostPlugin
         }
 
         if ($configured === 'sms' || $configured === 'both') {
-            if ($this->resolvePhone($customerId) !== '') {
+            if ($this->phoneResolver->resolve($customerId) !== null) {
                 $methods[] = TokenInterface::METHOD_SMS;
             }
         }
@@ -112,30 +104,5 @@ class LoginPostPlugin
         }
 
         return $methods;
-    }
-
-    /**
-     * Resolve the customer's phone number from their default billing address.
-     *
-     * Returns an empty string if no billing address or phone is found.
-     *
-     * @param int $customerId
-     * @return string
-     */
-    private function resolvePhone(int $customerId): string
-    {
-        try {
-            $customer         = $this->customerRepository->getById($customerId);
-            $billingAddressId = $customer->getDefaultBilling();
-
-            if (!$billingAddressId) {
-                return '';
-            }
-
-            $address = $this->addressRepository->getById((int) $billingAddressId);
-            return (string) $address->getTelephone();
-        } catch (NoSuchEntityException) {
-            return '';
-        }
     }
 }
